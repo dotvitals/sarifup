@@ -1,3 +1,7 @@
-fn main() {
-    println!("Hello, world!");
+use std::io;
+
+fn main() -> io::Result<()> {
+    let stdin = io::read_to_string(io::stdin())?;
+    print!("{stdin}");
+    Ok(())
 }

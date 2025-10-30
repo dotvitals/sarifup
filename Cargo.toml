@@ -3,4 +3,6 @@ name = "sarifup"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[[bin]]
+name = "sarifup"
+path = "src/main.rs"
