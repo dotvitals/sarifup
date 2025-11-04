@@ -3,17 +3,17 @@ use std::process::Child;
 use std::process::Command;
 use std::process::Stdio;
 
-const VALID_SARIF_STR: &[u8] =
-    b"{\"runs\":[{\"tool\":{\"driver\":{\"name\":\"test\"}}}],\"version\":\"1.0.0\"}";
-
 fn create_sarifup() -> Child {
     Command::new("target/debug/sarifup")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .arg("test.json")
+        .arg("tests/test.sarif")
         .spawn()
         .expect("Failed to spawn app!")
 }
+
+const VALID_SARIF_STR: &[u8] =
+    b"{\"runs\":[{\"tool\":{\"driver\":{\"name\":\"test\"}}}],\"version\":\"1.0.0\"}";
 
 #[test]
 fn errors_with_invalid_json() {
@@ -66,6 +66,23 @@ fn erorrs_when_missing_filename_arg() {
     let mut sarifup = Command::new("target/debug/sarifup")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn app!");
+
+    let stdin = sarifup.stdin.as_mut().unwrap();
+
+    stdin.write_all(VALID_SARIF_STR).unwrap();
+
+    let output = sarifup.wait_with_output().expect("Failed to read output!");
+    assert!(!output.status.success());
+}
+
+#[test]
+fn erorrs_when_file_cant_open() {
+    let mut sarifup = Command::new("target/debug/sarifup")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .arg("badfilename.name")
         .spawn()
         .expect("Failed to spawn app!");
 
