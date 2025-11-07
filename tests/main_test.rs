@@ -63,7 +63,7 @@ fn erorrs_with_message_when_cannot_get_filename_arg() {
 }
 
 #[test]
-fn erorrs_with_message_when_file_cant_open() {
+fn erorrs_with_message_when_file_cannot_open_sarif_file() {
     let mut sarifup = Command::new(SARIFUP_PATH)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
