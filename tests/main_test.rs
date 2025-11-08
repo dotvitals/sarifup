@@ -16,7 +16,7 @@ fn create_sarifup() -> Child {
 }
 
 const VALID_SARIF_STR: &[u8] =
-    b"{\"runs\":[{\"tool\":{\"driver\":{\"name\":\"test\"}}}],\"version\":\"1.0.0\"}";
+    br#"{"runs":[{"tool":{"driver":{"name":"test"}}}],"version":"1.0.0"}"#;
 
 #[test]
 fn succeeds_and_returns_input_for_valid_sarif() {
@@ -35,7 +35,7 @@ fn errors_with_message_when_unable_to_deserialize_stdin_sarif() {
     let mut sarifup = create_sarifup();
     let stdin = sarifup.stdin.as_mut().unwrap();
 
-    let missing_ver_sarif_str = b"{\"runs\":[{\"tool\":{\"driver\":{\"name\":\"test\"}}}]}";
+    let missing_ver_sarif_str = br#"{"runs":[{"tool":{"driver":{"name":"test"}}}]}"#;
     stdin.write_all(missing_ver_sarif_str).unwrap();
 
     let output = sarifup.wait_with_output().unwrap();
@@ -63,7 +63,7 @@ fn erorrs_with_message_when_cannot_get_filename_arg() {
 }
 
 #[test]
-fn erorrs_with_message_when_file_cannot_open_sarif_file() {
+fn erorrs_with_message_when_cannot_open_sarif_file() {
     let mut sarifup = Command::new(SARIFUP_PATH)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

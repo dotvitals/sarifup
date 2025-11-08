@@ -1,3 +1,5 @@
+pub mod sarifup;
+
 fn main() {
     use serde_json;
     use serde_sarif::sarif::Sarif;
@@ -13,6 +15,8 @@ fn main() {
     let file = File::open(filename).expect("Error opening SARIF file");
     let file_sarif: Sarif = serde_json::from_reader(file).expect("Error deserializing SARIF file");
 
-    let json: String = serde_json::to_string(&stdin_sarif).unwrap();
+    let merged_sarif = sarifup::merge(&stdin_sarif, &file_sarif);
+
+    let json: String = serde_json::to_string(&merged_sarif).unwrap();
     print!("{json}");
 }
