@@ -1,41 +1,51 @@
 use serde_sarif::sarif::{Result as SarifResult, Run, Sarif};
+use std::collections::HashMap;
 
 pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
-    let mut merged = new_sarif.clone();
+    // Build fingerprint → old result map
+    let old_by_fingerprint: HashMap<(String, String), SarifResult> = old_sarif
+        .runs
+        .iter()
+        .flat_map(|run| run.results.iter().flatten())
+        .flat_map(|result| {
+            result
+                .fingerprints
+                .iter()
+                .flatten()
+                .map(move |(k, v)| ((k.clone(), v.clone()), result.clone()))
+        })
+        .collect();
 
-    // Build lookup table: (fingerprint_key, fingerprint_value) → old_result
-    let mut old_by_fingerprint = std::collections::HashMap::<(String, String), SarifResult>::new();
-
-    for run in &old_sarif.runs {
-        if let Some(results) = &run.results {
-            for r in results {
-                if let Some(fps) = &r.fingerprints {
-                    for (k, v) in fps.iter() {
-                        old_by_fingerprint.insert((k.clone(), v.clone()), r.clone());
-                    }
+    // Helper: replace message when fingerprint matches
+    let update_result = |mut result: SarifResult| {
+        if let Some(fps) = &result.fingerprints {
+            for (k, v) in fps {
+                if let Some(old) = old_by_fingerprint.get(&(k.clone(), v.clone())) {
+                    result.message = old.message.clone();
+                    break;
                 }
             }
         }
-    }
+        result
+    };
 
-    // Modify merged new_sarif in-place
-    for run in &mut merged.runs {
-        if let Some(results) = &mut run.results {
-            for result in results.iter_mut() {
-                if let Some(fps) = &result.fingerprints {
-                    for (k, v) in fps.iter() {
-                        if let Some(old_result) = old_by_fingerprint.get(&(k.clone(), v.clone())) {
-                            // Replace message only
-                            result.message = old_result.message.clone();
-                            break; // Only replace once per result
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Build merged SARIF
+    let merged_runs: Vec<Run> = new_sarif
+        .runs
+        .iter()
+        .cloned()
+        .map(|mut run| {
+            run.results = run
+                .results
+                .map(|results| results.into_iter().map(update_result).collect());
+            run
+        })
+        .collect();
 
-    merged
+    Sarif {
+        runs: merged_runs,
+        ..new_sarif.clone()
+    }
 }
 
 #[test]
