@@ -187,8 +187,49 @@ fn merge_copies_rank_from_matching_fingerprint() {
 
     let merged = merge(&new_sarif, &old_sarif);
 
-    assert_eq!(
-        Some(5.0),
-        merged.runs[0].results.as_ref().unwrap()[0].rank
-    );
+    assert_eq!(Some(5.0), merged.runs[0].results.as_ref().unwrap()[0].rank);
+}
+
+#[test]
+#[ignore]
+fn perf_merge_large_sarif() {
+    // Size configurable via SARIF_PERF_SIZE env var (default 5000)
+    let size: usize = std::env::var("SARIF_PERF_SIZE")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(5000);
+
+    fn build_sarif(size: usize, prefix: usize, msg_prefix: &str) -> String {
+        let mut s = String::with_capacity(size * 64);
+        s.push_str("{\"version\":\"2.1.0\",\"runs\":[{");
+        s.push_str("\"tool\":{\"driver\":{\"name\":\"perf\"}},\"results\":[");
+
+        for i in 0..size {
+            let fp = prefix + i;
+            let res = format!(
+                "{{\"message\":{{\"text\":\"{} {}\"}},\"fingerprints\":{{\"hashResult/v1\":\"{}\"}}}}",
+                msg_prefix, i, fp
+            );
+            s.push_str(&res);
+            if i + 1 < size {
+                s.push(',');
+            }
+        }
+
+        s.push_str("]}]}");
+        s
+    }
+
+    // old has messages to copy from, new has placeholder messages
+    let new_json = build_sarif(size, 0, "new");
+    let old_json = build_sarif(size, 0, "old");
+
+    let new_sarif: Sarif = serde_json::from_str(&new_json).expect("failed parsing new sarif");
+    let old_sarif: Sarif = serde_json::from_str(&old_json).expect("failed parsing old sarif");
+
+    let start = std::time::Instant::now();
+    let _merged = merge(&new_sarif, &old_sarif);
+    let dur = start.elapsed();
+
+    eprintln!("perf_merge_large_sarif: size={} elapsed={:?}", size, dur);
 }
