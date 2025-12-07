@@ -32,6 +32,7 @@ pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
                         if let Some(old_res) = fp_map.get(&(k.clone(), v.clone())) {
                             updated_result.message = old_res.message.clone();
                             updated_result.rank = old_res.rank.clone();
+                            updated_result.suppressions = old_res.suppressions.clone();
                             break;
                         }
                     }
@@ -188,6 +189,60 @@ fn merge_copies_rank_from_matching_fingerprint() {
     let merged = merge(&new_sarif, &old_sarif);
 
     assert_eq!(Some(5.0), merged.runs[0].results.as_ref().unwrap()[0].rank);
+}
+
+#[test]
+fn merge_copies_suppressions_from_matching_fingerprint() {
+    let new_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [{
+                "tool": { "driver": { "name": "new_sarif" } },
+                "results": [{
+                    "message": { "text": "new sarif message" },
+                    "fingerprints": {
+                        "hashResult/v1": "abc123"
+                    }
+                }]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let old_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [{
+                "tool": { "driver": { "name": "old_sarif" } },
+                "results": [{
+                    "message": { "text": "old sarif message" },
+                    "fingerprints": {
+                        "hashResult/v1": "abc123"
+                    },
+                    "suppressions": [{
+                        "kind": "inSource",
+                        "justification": "old justification"
+                    }]
+                }]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let merged = merge(&new_sarif, &old_sarif);
+
+    let justification = merged.runs[0]
+        .results
+        .as_ref()
+        .unwrap()[0]
+        .suppressions
+        .as_ref()
+        .unwrap()[0]
+        .justification
+        .as_ref()
+        .unwrap();
+
+    assert_eq!("old justification", justification);
 }
 
 #[test]
