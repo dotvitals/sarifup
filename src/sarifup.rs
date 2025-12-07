@@ -1,46 +1,50 @@
-use serde_sarif::sarif::{Result as SarifResult, Run, Sarif};
+use serde_sarif::sarif::{Result as SarifResult, Sarif};
 use std::collections::HashMap;
 
 pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
-    // Build fingerprint → old result map
-    let old_by_fingerprint: HashMap<(String, String), SarifResult> = old_sarif
-        .runs
-        .iter()
-        .flat_map(|run| run.results.iter().flatten())
-        .flat_map(|result| {
-            result
-                .fingerprints
-                .iter()
-                .flatten()
-                .map(move |(k, v)| ((k.clone(), v.clone()), result.clone()))
-        })
-        .collect();
+    let mut fp_map: HashMap<(String, String), &SarifResult> = HashMap::new();
 
-    // Helper: replace message when fingerprint matches
-    let update_result = |mut result: SarifResult| {
-        if let Some(fps) = &result.fingerprints {
-            for (k, v) in fps {
-                if let Some(old) = old_by_fingerprint.get(&(k.clone(), v.clone())) {
-                    result.message = old.message.clone();
-                    break;
+    for run in &old_sarif.runs {
+        if let Some(results) = &run.results {
+            for result in results {
+                if let Some(fps) = &result.fingerprints {
+                    for (k, v) in fps {
+                        fp_map.insert((k.clone(), v.clone()), result);
+                    }
                 }
             }
         }
-        result
-    };
+    }
 
-    // Build merged SARIF
-    let merged_runs: Vec<Run> = new_sarif
-        .runs
-        .iter()
-        .cloned()
-        .map(|mut run| {
-            run.results = run
-                .results
-                .map(|results| results.into_iter().map(update_result).collect());
-            run
-        })
-        .collect();
+    let mut merged_runs = Vec::with_capacity(new_sarif.runs.len());
+
+    for run in &new_sarif.runs {
+        let mut new_run = run.clone();
+
+        if let Some(results) = &run.results {
+            let mut new_results = Vec::with_capacity(results.len());
+
+            for result in results {
+                let mut updated_result = result.clone();
+
+                if let Some(fps) = &result.fingerprints {
+                    for (k, v) in fps {
+                        if let Some(old_res) = fp_map.get(&(k.clone(), v.clone())) {
+                            updated_result.message = old_res.message.clone();
+                            updated_result.rank = old_res.rank.clone();
+                            break;
+                        }
+                    }
+                }
+
+                new_results.push(updated_result);
+            }
+
+            new_run.results = Some(new_results);
+        }
+
+        merged_runs.push(new_run);
+    }
 
     Sarif {
         runs: merged_runs,
@@ -144,4 +148,47 @@ fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
 }
 
 //returns rank from any result in any run
-//keeps new sairf if no fingerprint matched
+//keeps new sarif if no fingerprint matched
+
+#[test]
+fn merge_copies_rank_from_matching_fingerprint() {
+    let new_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [{
+                "tool": { "driver": { "name": "new_sarif" } },
+                "results": [{
+                    "message": { "text": "new sarif message" },
+                    "fingerprints": {
+                        "hashResult/v1": "abc123"
+                    }
+                }]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let old_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [{
+                "tool": { "driver": { "name": "old_sarif" } },
+                "results": [{
+                    "message": { "text": "old sarif message" },
+                    "rank": 5,
+                    "fingerprints": {
+                        "hashResult/v1": "abc123"
+                    }
+                }]
+            }]
+        }"#,
+    )
+    .unwrap();
+
+    let merged = merge(&new_sarif, &old_sarif);
+
+    assert_eq!(
+        Some(5.0),
+        merged.runs[0].results.as_ref().unwrap()[0].rank
+    );
+}
