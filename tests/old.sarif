@@ -1,0 +1,19 @@
+{
+  "version": "2.1.0",
+  "runs": [{
+    "tool": { "driver": { "name": "old_sarif" } },
+    "results": [{
+      "message": { "text": "old sarif message" },
+      "rank": 5,
+      "fingerprints": { "hashResult/v1": "abc123" },
+      "suppressions": [{
+        "kind": "inSource",
+        "justification": "old justification"
+      }]
+    }, {
+      "message": { "text": "old sarif other message" },
+      "rank": 3,
+      "fingerprints": { "hashResult/v1": "def456" }
+    }]
+  }]
+}
