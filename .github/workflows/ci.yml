@@ -30,7 +30,7 @@ jobs:
     - name: Install Rust targets
       run: rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
     - name: Install cross-copmiler
-      run: sudo apt-get install gcc-aarch664-linux-gnu
+      run: sudo apt-get install gcc-aarch64-linux-gnu
     - name: build x86_64 linux
       run: cargo build --release --target x86_64-unknown-linux-gnu
     - name: build aarch64 linux
