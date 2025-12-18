@@ -19,7 +19,7 @@ jobs:
     - name: Run tests
       run: cargo test
 
-  build-and-release-on-ubuntu:
+  build-and-release-on-ubuntu-x86:
     runs-on: ubuntu-latest
     needs: test
     permissions:
@@ -28,23 +28,34 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install Rust targets
-      run: rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
-    - name: Install cross-copmiler
-      run: sudo apt-get install gcc-aarch64-linux-gnu
+      run: rustup target add x86_64-unknown-linux-gnu
     - name: build x86_64 linux
       run: cargo build --release --target x86_64-unknown-linux-gnu
+    - name: release ubuntu
+      uses: softprops/action-gh-release@v2
+      if: github.ref_type == 'tag'
+      with:
+        files: target/aarch64-unknown-linux-gnu/release/sarifup
+
+  build-and-release-on-ubuntu-arm64:
+    runs-on: ubuntu-latest-arm64
+    needs: test
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust targets
+      run: rustup target add aarch64-unknown-linux-gnu
     - name: build aarch64 linux
       run: cargo build --release --target aarch64-unknown-linux-gnu
     - name: release ubuntu
       uses: softprops/action-gh-release@v2
       if: github.ref_type == 'tag'
       with:
-        files: |
-          target/x86_64-unknown-linux-gnu/release/sarifup
-          target/aarch64-unknown-linux-gnu/release/sarifup
+        files: target/aarch64-unknown-linux-gnu/release/sarifup
 
   build-and-release-on-macos:
-
     runs-on: macos-latest
     needs: test
     permissions:
@@ -67,7 +78,6 @@ jobs:
           target/aarch64-apple-darwin/release/sarifup
 
   build-and-release-on-windows:
-
     runs-on: windows-latest
     needs: test
     permissions:
