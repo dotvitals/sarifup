@@ -37,23 +37,23 @@ jobs:
       with:
         files: target/aarch64-unknown-linux-gnu/release/sarifup
 
-  build-and-release-on-ubuntu-arm64:
-    runs-on: ubuntu-latest-arm64
-    needs: test
-    permissions:
-      contents: write
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Install Rust targets
-      run: rustup target add aarch64-unknown-linux-gnu
-    - name: build aarch64 linux
-      run: cargo build --release --target aarch64-unknown-linux-gnu
-    - name: release ubuntu
-      uses: softprops/action-gh-release@v2
-      if: github.ref_type == 'tag'
-      with:
-        files: target/aarch64-unknown-linux-gnu/release/sarifup
+#  build-and-release-on-ubuntu-arm64:
+#    runs-on: ubuntu-latest-arm64
+#    needs: test
+#    permissions:
+#      contents: write
+#
+#    steps:
+#    - uses: actions/checkout@v4
+#    - name: Install Rust targets
+#      run: rustup target add aarch64-unknown-linux-gnu
+#    - name: build aarch64 linux
+#      run: cargo build --release --target aarch64-unknown-linux-gnu
+#    - name: release ubuntu
+#      uses: softprops/action-gh-release@v2
+#      if: github.ref_type == 'tag'
+#      with:
+#        files: target/aarch64-unknown-linux-gnu/release/sarifup
 
   build-and-release-on-macos:
     runs-on: macos-latest
