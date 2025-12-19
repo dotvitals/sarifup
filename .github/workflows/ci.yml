@@ -77,7 +77,7 @@ jobs:
     needs: test
     permissions:
       contents: write
-  steps:
+    steps:
     - uses: actions/checkout@v4
     - name: Install Rust target
       run: rustup target add x86_64-pc-windows-msvc
