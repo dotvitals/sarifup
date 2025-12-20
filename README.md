@@ -41,3 +41,10 @@ Run unit and integration tests with Cargo:
 ```bash
 cargo test
 ```
+
+Run performance tests with:
+
+```bash
+cargo test sarifup::perf_merge_large_sarif -- --exact --ignored
+```
+You can specify the number of results to be used in performance tests by setting the environment variable `SARIF_PERF_SIZE`.

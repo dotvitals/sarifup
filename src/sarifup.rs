@@ -231,10 +231,7 @@ fn merge_copies_suppressions_from_matching_fingerprint() {
 
     let merged = merge(&new_sarif, &old_sarif);
 
-    let justification = merged.runs[0]
-        .results
-        .as_ref()
-        .unwrap()[0]
+    let justification = merged.runs[0].results.as_ref().unwrap()[0]
         .suppressions
         .as_ref()
         .unwrap()[0]
@@ -248,11 +245,10 @@ fn merge_copies_suppressions_from_matching_fingerprint() {
 #[test]
 #[ignore]
 fn perf_merge_large_sarif() {
-    // Size configurable via SARIF_PERF_SIZE env var (default 5000)
     let size: usize = std::env::var("SARIF_PERF_SIZE")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(5000);
+        .unwrap_or(10000);
 
     fn build_sarif(size: usize, prefix: usize, msg_prefix: &str) -> String {
         let mut s = String::with_capacity(size * 64);
