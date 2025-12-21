@@ -48,3 +48,11 @@ Run performance tests with:
 cargo test sarifup::perf_merge_large_sarif -- --exact --ignored
 ```
 You can specify the number of results to be used in performance tests by setting the environment variable `SARIF_PERF_SIZE`.
+
+## Vitals:
+
+`.vitals\grype.sarif.json`: [grype](https://github.com/anchore/grype) for dependency scanning. Generate with:
+
+```bash
+grype dir:. -o sarif > .vitals/grype.sarif.json
+```
