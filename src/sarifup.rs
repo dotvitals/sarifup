@@ -1,56 +1,88 @@
 use serde_sarif::sarif::{Result as SarifResult, Sarif};
 use std::collections::HashMap;
 
-pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
-    let mut fp_map: HashMap<(String, String), &SarifResult> = HashMap::new();
+type FingerprintKey = (String, String);
 
-    for run in &old_sarif.runs {
-        if let Some(results) = &run.results {
-            for result in results {
-                if let Some(fps) = &result.fingerprints {
-                    for (k, v) in fps {
-                        fp_map.insert((k.clone(), v.clone()), result);
-                    }
-                }
-            }
-        }
-    }
+pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
+    let fp_map = build_fingerprint_map(old_sarif);
 
     let mut merged_runs = Vec::with_capacity(new_sarif.runs.len());
 
     for run in &new_sarif.runs {
-        let mut new_run = run.clone();
-
-        if let Some(results) = &run.results {
-            let mut new_results = Vec::with_capacity(results.len());
-
-            for result in results {
-                let mut updated_result = result.clone();
-
-                if let Some(fps) = &result.fingerprints {
-                    for (k, v) in fps {
-                        if let Some(old_res) = fp_map.get(&(k.clone(), v.clone())) {
-                            updated_result.message = old_res.message.clone();
-                            updated_result.rank = old_res.rank.clone();
-                            updated_result.suppressions = old_res.suppressions.clone();
-                            break;
-                        }
-                    }
-                }
-
-                new_results.push(updated_result);
-            }
-
-            new_run.results = Some(new_results);
-        }
-
-        merged_runs.push(new_run);
+        merged_runs.push(merge_run(run, &fp_map));
     }
 
     Sarif {
         runs: merged_runs,
         ..new_sarif.clone()
     }
+}
+
+#[inline]
+fn build_fingerprint_map<'a>(sarif: &'a Sarif) -> HashMap<FingerprintKey, &'a SarifResult> {
+    let mut fp_map = HashMap::new();
+
+    for run in &sarif.runs {
+        let Some(results) = &run.results else {
+            continue;
+        };
+
+        for result in results {
+            let Some(fps) = &result.fingerprints else {
+                continue;
+            };
+
+            for (k, v) in fps {
+                fp_map.insert((k.clone(), v.clone()), result);
+            }
+        }
+    }
+
+    fp_map
+}
+
+#[inline]
+fn merge_run(
+    run: &serde_sarif::sarif::Run,
+    fp_map: &HashMap<FingerprintKey, &SarifResult>,
+) -> serde_sarif::sarif::Run {
+    let mut new_run = run.clone();
+
+    let Some(results) = &run.results else {
+        return new_run;
+    };
+
+    let mut new_results = Vec::with_capacity(results.len());
+
+    for result in results {
+        new_results.push(merge_result(result, fp_map));
+    }
+
+    new_run.results = Some(new_results);
+    new_run
+}
+
+#[inline]
+fn merge_result(
+    result: &SarifResult,
+    fp_map: &HashMap<FingerprintKey, &SarifResult>,
+) -> SarifResult {
+    let mut updated = result.clone();
+
+    let Some(fps) = &result.fingerprints else {
+        return updated;
+    };
+
+    for (k, v) in fps {
+        if let Some(old) = fp_map.get(&(k.clone(), v.clone())) {
+            updated.message = old.message.clone();
+            updated.rank = old.rank.clone();
+            updated.suppressions = old.suppressions.clone();
+            break;
+        }
+    }
+
+    updated
 }
 
 #[test]
