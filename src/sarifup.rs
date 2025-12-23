@@ -3,9 +3,13 @@ use std::collections::HashMap;
 
 type FingerprintKey = (String, String);
 
+// Performance has been prioritised over using a more functional (and readable) style.
+// Comments explain choices made for performance improvements.
 pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
+    // Precompute lookup table to avoid repeated scans of old_sarif
     let fp_map = build_fingerprint_map(old_sarif);
 
+    // Preallocate to avoid Vec reallocation during push
     let mut merged_runs = Vec::with_capacity(new_sarif.runs.len());
 
     for run in &new_sarif.runs {
@@ -22,6 +26,7 @@ pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
 fn build_fingerprint_map<'a>(sarif: &'a Sarif) -> HashMap<FingerprintKey, &'a SarifResult> {
     let mut fp_map = HashMap::new();
 
+    // Imperative loops used to avoid iterator chaining overhead
     for run in &sarif.runs {
         let Some(results) = &run.results else {
             continue;
@@ -32,6 +37,7 @@ fn build_fingerprint_map<'a>(sarif: &'a Sarif) -> HashMap<FingerprintKey, &'a Sa
                 continue;
             };
 
+            // Clone keys eagerly to allow owned HashMap keys
             for (k, v) in fps {
                 fp_map.insert((k.clone(), v.clone()), result);
             }
@@ -52,6 +58,7 @@ fn merge_run(
         return new_run;
     };
 
+    // Preallocate exact size to avoid growth checks
     let mut new_results = Vec::with_capacity(results.len());
 
     for result in results {
@@ -73,6 +80,7 @@ fn merge_result(
         return updated;
     };
 
+    // Early-exit loop avoids unnecessary comparisons once a match is found
     for (k, v) in fps {
         if let Some(old) = fp_map.get(&(k.clone(), v.clone())) {
             updated.message = old.message.clone();
