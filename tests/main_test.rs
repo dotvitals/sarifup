@@ -102,7 +102,7 @@ fn errors_with_message_when_cannot_deserialize_sarif_file() {
 }
 
 #[test]
-fn copies_message_rank_supressions_for_matching_fingerprints() {
+fn updates_sarif_file() {
     let mut sarifup = Command::new(SARIFUP_PATH)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -138,4 +138,6 @@ fn copies_message_rank_supressions_for_matching_fingerprints() {
     assert!(stdout_str.contains("new sarif other message"));
     assert!(!stdout_str.contains("old sarif other message"));
     assert!(!stdout_str.contains("\"rank\":3"));
+    //should show count of new, updated and closed results
+    assert!(stdout_str.contains("1 new, 1 updated and 1 closed results."));
 }

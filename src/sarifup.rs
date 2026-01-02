@@ -3,17 +3,61 @@ use std::collections::HashMap;
 
 type FingerprintKey = (String, String);
 
+#[inline]
+fn count_run_changes(
+    run: &serde_sarif::sarif::Run,
+    fp_map: &HashMap<FingerprintKey, &SarifResult>,
+    old_result_count: usize,
+) -> (usize, usize, usize) {
+    let Some(results) = &run.results else {
+        return (0, 0, old_result_count);
+    };
+
+    let mut updated = 0;
+
+    for result in results {
+        let Some(fps) = &result.fingerprints else {
+            continue;
+        };
+
+        for (k, v) in fps {
+            if fp_map.contains_key(&(k.clone(), v.clone())) {
+                updated += 1;
+                break;
+            }
+        }
+    }
+
+    let new = results.len() - updated;
+    let closed = old_result_count.saturating_sub(updated);
+
+    (new, updated, closed)
+}
+
+#[inline]
+fn count_old_results(sarif: &Sarif) -> usize {
+    let mut count = 0;
+
+    for run in &sarif.runs {
+        if let Some(results) = &run.results {
+            count += results.len();
+        }
+    }
+
+    count
+}
+
 // Performance has been prioritised over using a more functional (and readable) style.
 // Comments explain choices made for performance improvements.
 pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
-    // Precompute lookup table to avoid repeated scans of old_sarif
     let fp_map = build_fingerprint_map(old_sarif);
+    let old_result_count = count_old_results(old_sarif);
 
-    // Preallocate to avoid Vec reallocation during push
     let mut merged_runs = Vec::with_capacity(new_sarif.runs.len());
 
     for run in &new_sarif.runs {
-        merged_runs.push(merge_run(run, &fp_map));
+        let counts = count_run_changes(run, &fp_map, old_result_count);
+        merged_runs.push(merge_run(run, &fp_map, counts));
     }
 
     Sarif {
@@ -51,6 +95,7 @@ fn build_fingerprint_map<'a>(sarif: &'a Sarif) -> HashMap<FingerprintKey, &'a Sa
 fn merge_run(
     run: &serde_sarif::sarif::Run,
     fp_map: &HashMap<FingerprintKey, &SarifResult>,
+    counts: (usize, usize, usize),
 ) -> serde_sarif::sarif::Run {
     let mut new_run = run.clone();
 
@@ -58,7 +103,6 @@ fn merge_run(
         return new_run;
     };
 
-    // Preallocate exact size to avoid growth checks
     let mut new_results = Vec::with_capacity(results.len());
 
     for result in results {
@@ -66,6 +110,19 @@ fn merge_run(
     }
 
     new_run.results = Some(new_results);
+
+    let (new, updated, closed) = counts;
+    new_run.automation_details = Some(serde_sarif::sarif::RunAutomationDetails {
+        description: Some(serde_sarif::sarif::Message {
+            text: Some(format!(
+                "{} new, {} updated and {} closed results.",
+                new, updated, closed
+            )),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+
     new_run
 }
 
@@ -130,7 +187,7 @@ fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
                             }
                         }
                     ]
-                },{
+                }, {
                     "tool": {
                         "driver": {
                             "name": "new_sarif_2"
@@ -188,8 +245,81 @@ fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
     );
 }
 
-//returns rank from any result in any run
-//keeps new sarif if no fingerprint matched
+#[test]
+fn counts_new_updated_closed_results_for_run() {
+    let new_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [{
+                    "tool": {
+                        "driver": {
+                            "name": "new_sarif_1"
+                        }
+                    },
+                    "results": [{
+                           "message": {
+                                "text": "new sarif message 1"
+                            },
+                            "fingerprints": {
+                                "hashResult/v1": "abc123"
+                            }
+                        }, {
+                            "message": {
+                                "text": "new sarif message 2"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .unwrap();
+
+    let old_sarif: Sarif = serde_json::from_str(
+        r#"{
+            "version": "2.1.0",
+            "runs": [
+                {
+                    "tool": {
+                        "driver": {
+                            "name": "old_sarif_2"
+                        }
+                    },
+                    "results": [{
+                            "message": {
+                                "text": "old sarif message 1"
+                            }
+                        }, {
+                            "message": {
+                                "text": "old sarif message 2"
+                            },
+                            "fingerprints": {
+                                "hashResult/v1": "abc123"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .unwrap();
+
+    let merged_sarif = merge(&new_sarif, &old_sarif);
+
+    assert_eq!(
+        "1 new, 1 updated and 1 closed results.",
+        merged_sarif.runs[0]
+            .automation_details
+            .as_ref()
+            .unwrap()
+            .description
+            .as_ref()
+            .unwrap()
+            .text
+            .as_ref()
+            .unwrap()
+    );
+}
 
 #[test]
 fn merge_copies_rank_from_matching_fingerprint() {
