@@ -155,14 +155,16 @@ mod tests {
     use super::*;
     use serde_sarif::sarif::Sarif;
 
+    fn load_fixture(name: &str) -> Sarif {
+        let path = format!("tests/fixtures/{}", name);
+        let content = std::fs::read_to_string(path).unwrap();
+        serde_json::from_str(&content).unwrap()
+    }
+
     #[test]
     fn merge_returns_new_sarif() {
-        let new_sarif: Sarif =
-            serde_json::from_str(include_str!("../tests/fixtures/returns_new_new.sarif"))
-                .unwrap();
-        let old_sarif: Sarif =
-            serde_json::from_str(include_str!("../tests/fixtures/returns_new_old.sarif"))
-                .unwrap();
+        let new_sarif = load_fixture("returns_new_new.sarif");
+        let old_sarif = load_fixture("returns_new_old.sarif");
 
         let merged_sarif = merge(&new_sarif, &old_sarif);
 
@@ -171,15 +173,8 @@ mod tests {
 
     #[test]
     fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
-        let new_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/updates_and_counts_new.sarif"
-        ))
-        .unwrap();
-
-        let old_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/updates_and_counts_old.sarif"
-        ))
-        .unwrap();
+        let new_sarif = load_fixture("updates_and_counts_new.sarif");
+        let old_sarif = load_fixture("updates_and_counts_old.sarif");
 
         let merged_sarif = merge(&new_sarif, &old_sarif);
 
@@ -195,15 +190,8 @@ mod tests {
 
     #[test]
     fn counts_new_updated_closed_results_for_run() {
-        let new_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/updates_and_counts_new.sarif"
-        ))
-        .unwrap();
-
-        let old_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/updates_and_counts_old.sarif"
-        ))
-        .unwrap();
+        let new_sarif = load_fixture("updates_and_counts_new.sarif");
+        let old_sarif = load_fixture("updates_and_counts_old.sarif");
 
         let merged_sarif = merge(&new_sarif, &old_sarif);
 
@@ -224,13 +212,8 @@ mod tests {
 
     #[test]
     fn merge_copies_rank_from_matching_fingerprint() {
-        let new_sarif: Sarif =
-            serde_json::from_str(include_str!("../tests/fixtures/copies_rank_new.sarif"))
-                .unwrap();
-
-        let old_sarif: Sarif =
-            serde_json::from_str(include_str!("../tests/fixtures/copies_rank_old.sarif"))
-                .unwrap();
+        let new_sarif = load_fixture("copies_rank_new.sarif");
+        let old_sarif = load_fixture("copies_rank_old.sarif");
 
         let merged = merge(&new_sarif, &old_sarif);
 
@@ -239,15 +222,8 @@ mod tests {
 
     #[test]
     fn merge_copies_suppressions_from_matching_fingerprint() {
-        let new_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/copies_suppressions_new.sarif"
-        ))
-        .unwrap();
-
-        let old_sarif: Sarif = serde_json::from_str(include_str!(
-            "../tests/fixtures/copies_suppressions_old.sarif"
-        ))
-        .unwrap();
+        let new_sarif = load_fixture("copies_suppressions_new.sarif");
+        let old_sarif = load_fixture("copies_suppressions_old.sarif");
 
         let merged = merge(&new_sarif, &old_sarif);
 
@@ -261,7 +237,6 @@ mod tests {
 
         assert_eq!("old justification", justification);
     }
-
     #[test]
     #[ignore]
     fn perf_merge_large_sarif() {
