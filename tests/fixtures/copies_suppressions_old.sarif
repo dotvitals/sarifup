@@ -1,16 +1,16 @@
 {
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "old_sarif" } },
-                "results": [{
-                    "message": { "text": "old sarif message" },
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    },
-                    "suppressions": [{
-                        "kind": "inSource",
-                        "justification": "old justification"
-                    }]
-                }]
+    "version": "2.1.0",
+    "runs": [{
+        "tool": { "driver": { "name": "old_sarif" } },
+        "results": [{
+            "message": { "text": "old sarif message" },
+            "fingerprints": {
+                "hashResult/v1": "abc123"
+            },
+            "suppressions": [{
+                "kind": "inSource",
+                "justification": "old justification"
             }]
-        }
+        }]
+    }]
+}

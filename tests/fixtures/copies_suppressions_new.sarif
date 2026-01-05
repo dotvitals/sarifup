@@ -1,12 +1,12 @@
 {
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "new_sarif" } },
-                "results": [{
-                    "message": { "text": "new sarif message" },
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    }
-                }]
-            }]
-        }
+    "version": "2.1.0",
+    "runs": [{
+        "tool": { "driver": { "name": "new_sarif" } },
+        "results": [{
+            "message": { "text": "new sarif message" },
+            "fingerprints": {
+                "hashResult/v1": "abc123"
+            }
+        }]
+    }]
+}
