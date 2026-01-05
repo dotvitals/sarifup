@@ -1,0 +1,30 @@
+{
+            "version": "2.1.0",
+            "runs": [{
+                    "tool": {
+                        "driver": {
+                            "name": "old_sarif_1"
+                        }
+                    }
+                }, {
+                    "tool": {
+                        "driver": {
+                            "name": "old_sarif_2"
+                        }
+                    },
+                    "results": [{
+                            "message": {
+                                "text": "old sarif message 1"
+                            }
+                        }, {
+                            "message": {
+                                "text": "old sarif message 2"
+                            },
+                            "fingerprints": {
+                                "hashResult/v1": "abc123"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }

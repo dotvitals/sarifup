@@ -150,307 +150,159 @@ fn merge_result(
     updated
 }
 
-#[test]
-fn merge_returns_new_sarif() {
-    let new_sarif: Sarif = serde_json::from_str(r#"{ "version": "2.1.0", "runs": [] }"#).unwrap();
-    let old_sarif: Sarif = serde_json::from_str(
-        r#"{ "version": "2.1.0", "runs": [{"tool": {"driver": {"name": "test"}}}] }"#,
-    )
-    .unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_sarif::sarif::Sarif;
 
-    let merged_sarif = merge(&new_sarif, &old_sarif);
+    #[test]
+    fn merge_returns_new_sarif() {
+        let new_sarif: Sarif =
+            serde_json::from_str(include_str!("../tests/fixtures/returns_new_new.sarif"))
+                .unwrap();
+        let old_sarif: Sarif =
+            serde_json::from_str(include_str!("../tests/fixtures/returns_new_old.sarif"))
+                .unwrap();
 
-    assert_eq!(new_sarif, merged_sarif);
-}
+        let merged_sarif = merge(&new_sarif, &old_sarif);
 
-#[test]
-fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
-    let new_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                    "tool": {
-                        "driver": {
-                            "name": "new_sarif_1"
-                        }
-                    },
-                    "results": [{
-                           "message": {
-                                "text": "new sarif message 1"
-                            },
-                            "fingerprints": {
-                                "hashResult/v1": "abc123"
-                            }
-                        }, {
-                            "message": {
-                                "text": "new sarif message 2"
-                            }
-                        }
-                    ]
-                }, {
-                    "tool": {
-                        "driver": {
-                            "name": "new_sarif_2"
-                        }
-                    }
-                }
-            ]
-        }"#,
-    )
-    .unwrap();
-
-    let old_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                    "tool": {
-                        "driver": {
-                            "name": "old_sarif_1"
-                        }
-                    }
-                }, {
-                    "tool": {
-                        "driver": {
-                            "name": "old_sarif_2"
-                        }
-                    },
-                    "results": [{
-                            "message": {
-                                "text": "old sarif message 1"
-                            }
-                        }, {
-                            "message": {
-                                "text": "old sarif message 2"
-                            },
-                            "fingerprints": {
-                                "hashResult/v1": "abc123"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }"#,
-    )
-    .unwrap();
-
-    let merged_sarif = merge(&new_sarif, &old_sarif);
-
-    assert_eq!(
-        "old sarif message 2",
-        merged_sarif.runs[0].results.as_ref().unwrap()[0]
-            .message
-            .text
-            .as_ref()
-            .unwrap()
-    );
-}
-
-#[test]
-fn counts_new_updated_closed_results_for_run() {
-    let new_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                    "tool": {
-                        "driver": {
-                            "name": "new_sarif_1"
-                        }
-                    },
-                    "results": [{
-                           "message": {
-                                "text": "new sarif message 1"
-                            },
-                            "fingerprints": {
-                                "hashResult/v1": "abc123"
-                            }
-                        }, {
-                            "message": {
-                                "text": "new sarif message 2"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }"#,
-    )
-    .unwrap();
-
-    let old_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [
-                {
-                    "tool": {
-                        "driver": {
-                            "name": "old_sarif_2"
-                        }
-                    },
-                    "results": [{
-                            "message": {
-                                "text": "old sarif message 1"
-                            }
-                        }, {
-                            "message": {
-                                "text": "old sarif message 2"
-                            },
-                            "fingerprints": {
-                                "hashResult/v1": "abc123"
-                            }
-                        }
-                    ]
-                }
-            ]
-        }"#,
-    )
-    .unwrap();
-
-    let merged_sarif = merge(&new_sarif, &old_sarif);
-
-    assert_eq!(
-        "1 new, 1 updated and 1 closed results.",
-        merged_sarif.runs[0]
-            .automation_details
-            .as_ref()
-            .unwrap()
-            .description
-            .as_ref()
-            .unwrap()
-            .text
-            .as_ref()
-            .unwrap()
-    );
-}
-
-#[test]
-fn merge_copies_rank_from_matching_fingerprint() {
-    let new_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "new_sarif" } },
-                "results": [{
-                    "message": { "text": "new sarif message" },
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    }
-                }]
-            }]
-        }"#,
-    )
-    .unwrap();
-
-    let old_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "old_sarif" } },
-                "results": [{
-                    "message": { "text": "old sarif message" },
-                    "rank": 5,
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    }
-                }]
-            }]
-        }"#,
-    )
-    .unwrap();
-
-    let merged = merge(&new_sarif, &old_sarif);
-
-    assert_eq!(Some(5.0), merged.runs[0].results.as_ref().unwrap()[0].rank);
-}
-
-#[test]
-fn merge_copies_suppressions_from_matching_fingerprint() {
-    let new_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "new_sarif" } },
-                "results": [{
-                    "message": { "text": "new sarif message" },
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    }
-                }]
-            }]
-        }"#,
-    )
-    .unwrap();
-
-    let old_sarif: Sarif = serde_json::from_str(
-        r#"{
-            "version": "2.1.0",
-            "runs": [{
-                "tool": { "driver": { "name": "old_sarif" } },
-                "results": [{
-                    "message": { "text": "old sarif message" },
-                    "fingerprints": {
-                        "hashResult/v1": "abc123"
-                    },
-                    "suppressions": [{
-                        "kind": "inSource",
-                        "justification": "old justification"
-                    }]
-                }]
-            }]
-        }"#,
-    )
-    .unwrap();
-
-    let merged = merge(&new_sarif, &old_sarif);
-
-    let justification = merged.runs[0].results.as_ref().unwrap()[0]
-        .suppressions
-        .as_ref()
-        .unwrap()[0]
-        .justification
-        .as_ref()
-        .unwrap();
-
-    assert_eq!("old justification", justification);
-}
-
-#[test]
-#[ignore]
-fn perf_merge_large_sarif() {
-    let size: usize = std::env::var("SARIF_PERF_SIZE")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(10000);
-
-    fn build_sarif(size: usize, prefix: usize, msg_prefix: &str) -> String {
-        let mut s = String::with_capacity(size * 64);
-        s.push_str("{\"version\":\"2.1.0\",\"runs\":[{");
-        s.push_str("\"tool\":{\"driver\":{\"name\":\"perf\"}},\"results\":[");
-
-        for i in 0..size {
-            let fp = prefix + i;
-            let res = format!(
-                "{{\"message\":{{\"text\":\"{} {}\"}},\"fingerprints\":{{\"hashResult/v1\":\"{}\"}}}}",
-                msg_prefix, i, fp
-            );
-            s.push_str(&res);
-            if i + 1 < size {
-                s.push(',');
-            }
-        }
-
-        s.push_str("]}]}");
-        s
+        assert_eq!(new_sarif, merged_sarif);
     }
 
-    // old has messages to copy from, new has placeholder messages
-    let new_json = build_sarif(size, 0, "new");
-    let old_json = build_sarif(size, 0, "old");
+    #[test]
+    fn merge_updates_message_from_matching_fingerprint_in_any_result_in_any_run() {
+        let new_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/updates_and_counts_new.sarif"
+        ))
+        .unwrap();
 
-    let new_sarif: Sarif = serde_json::from_str(&new_json).expect("failed parsing new sarif");
-    let old_sarif: Sarif = serde_json::from_str(&old_json).expect("failed parsing old sarif");
+        let old_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/updates_and_counts_old.sarif"
+        ))
+        .unwrap();
 
-    let start = std::time::Instant::now();
-    let _merged = merge(&new_sarif, &old_sarif);
-    let dur = start.elapsed();
+        let merged_sarif = merge(&new_sarif, &old_sarif);
 
-    eprintln!("perf_merge_large_sarif: size={} elapsed={:?}", size, dur);
+        assert_eq!(
+            "old sarif message 2",
+            merged_sarif.runs[0].results.as_ref().unwrap()[0]
+                .message
+                .text
+                .as_ref()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn counts_new_updated_closed_results_for_run() {
+        let new_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/updates_and_counts_new.sarif"
+        ))
+        .unwrap();
+
+        let old_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/updates_and_counts_old.sarif"
+        ))
+        .unwrap();
+
+        let merged_sarif = merge(&new_sarif, &old_sarif);
+
+        assert_eq!(
+            "1 new, 1 updated and 1 closed results.",
+            merged_sarif.runs[0]
+                .automation_details
+                .as_ref()
+                .unwrap()
+                .description
+                .as_ref()
+                .unwrap()
+                .text
+                .as_ref()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn merge_copies_rank_from_matching_fingerprint() {
+        let new_sarif: Sarif =
+            serde_json::from_str(include_str!("../tests/fixtures/copies_rank_new.sarif"))
+                .unwrap();
+
+        let old_sarif: Sarif =
+            serde_json::from_str(include_str!("../tests/fixtures/copies_rank_old.sarif"))
+                .unwrap();
+
+        let merged = merge(&new_sarif, &old_sarif);
+
+        assert_eq!(Some(5.0), merged.runs[0].results.as_ref().unwrap()[0].rank);
+    }
+
+    #[test]
+    fn merge_copies_suppressions_from_matching_fingerprint() {
+        let new_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/copies_suppressions_new.sarif"
+        ))
+        .unwrap();
+
+        let old_sarif: Sarif = serde_json::from_str(include_str!(
+            "../tests/fixtures/copies_suppressions_old.sarif"
+        ))
+        .unwrap();
+
+        let merged = merge(&new_sarif, &old_sarif);
+
+        let justification = merged.runs[0].results.as_ref().unwrap()[0]
+            .suppressions
+            .as_ref()
+            .unwrap()[0]
+            .justification
+            .as_ref()
+            .unwrap();
+
+        assert_eq!("old justification", justification);
+    }
+
+    #[test]
+    #[ignore]
+    fn perf_merge_large_sarif() {
+        let size: usize = std::env::var("SARIF_PERF_SIZE")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(10000);
+
+        fn build_sarif(size: usize, prefix: usize, msg_prefix: &str) -> String {
+            let mut s = String::with_capacity(size * 64);
+            s.push_str("{\"version\":\"2.1.0\",\"runs\":[{");
+            s.push_str("\"tool\":{\"driver\":{\"name\":\"perf\"}},\"results\":[");
+
+            for i in 0..size {
+                let fp = prefix + i;
+                let res = format!(
+                    "{{\"message\":{{\"text\":\"{} {}\"}},\"fingerprints\":{{\"hashResult/v1\":\"{}\"}}}}",
+                    msg_prefix, i, fp
+                );
+                s.push_str(&res);
+                if i + 1 < size {
+                    s.push(',');
+                }
+            }
+
+            s.push_str("]}]}");
+            s
+        }
+
+        // old has messages to copy from, new has placeholder messages
+        let new_json = build_sarif(size, 0, "new");
+        let old_json = build_sarif(size, 0, "old");
+
+        let new_sarif: Sarif = serde_json::from_str(&new_json).expect("failed parsing new sarif");
+        let old_sarif: Sarif = serde_json::from_str(&old_json).expect("failed parsing old sarif");
+
+        let start = std::time::Instant::now();
+        let _merged = merge(&new_sarif, &old_sarif);
+        let dur = start.elapsed();
+
+        eprintln!("perf_merge_large_sarif: size={} elapsed={:?}", size, dur);
+    }
 }
+
