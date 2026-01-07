@@ -67,7 +67,7 @@ pub fn merge(new_sarif: &Sarif, old_sarif: &Sarif) -> Sarif {
 }
 
 #[inline]
-fn build_fingerprint_map<'a>(sarif: &'a Sarif) -> HashMap<FingerprintKey, &'a SarifResult> {
+fn build_fingerprint_map(sarif: &Sarif) -> HashMap<FingerprintKey, &SarifResult> {
     let mut fp_map = HashMap::new();
 
     // Imperative loops used to avoid iterator chaining overhead
@@ -141,7 +141,7 @@ fn merge_result(
     for (k, v) in fps {
         if let Some(old) = fp_map.get(&(k.clone(), v.clone())) {
             updated.message = old.message.clone();
-            updated.rank = old.rank.clone();
+            updated.rank = old.rank;
             updated.suppressions = old.suppressions.clone();
             break;
         }
@@ -188,15 +188,14 @@ mod tests {
         );
     }
 
-    #[test]
-    fn counts_new_updated_closed_results_for_run() {
-        let new_sarif = load_fixture("updates_and_counts_new.sarif");
-        let old_sarif = load_fixture("updates_and_counts_old.sarif");
+    fn assert_counts(new_fixture: &str, old_fixture: &str, expected_message: &str) {
+        let new_sarif = load_fixture(new_fixture);
+        let old_sarif = load_fixture(old_fixture);
 
         let merged_sarif = merge(&new_sarif, &old_sarif);
 
         assert_eq!(
-            "1 new, 1 updated and 1 closed results.",
+            expected_message,
             merged_sarif.runs[0]
                 .automation_details
                 .as_ref()
@@ -207,72 +206,42 @@ mod tests {
                 .text
                 .as_ref()
                 .unwrap()
+        );
+    }
+
+    #[test]
+    fn counts_new_updated_closed_results_for_run() {
+        assert_counts(
+            "updates_and_counts_new.sarif",
+            "updates_and_counts_old.sarif",
+            "1 new, 1 updated and 1 closed results.",
         );
     }
 
     #[test]
     fn counts_run_with_no_results() {
-        let new_sarif = load_fixture("counts_no_results_new.sarif");
-        let old_sarif = load_fixture("updates_and_counts_old.sarif");
-
-        let merged_sarif = merge(&new_sarif, &old_sarif);
-
-        assert_eq!(
+        assert_counts(
+            "counts_no_results_new.sarif",
+            "updates_and_counts_old.sarif",
             "0 new, 0 updated and 2 closed results.",
-            merged_sarif.runs[0]
-                .automation_details
-                .as_ref()
-                .unwrap()
-                .description
-                .as_ref()
-                .unwrap()
-                .text
-                .as_ref()
-                .unwrap()
         );
     }
 
     #[test]
     fn counts_no_matching_fingerprints() {
-        let new_sarif = load_fixture("counts_no_matching_fingerprints_new.sarif");
-        let old_sarif = load_fixture("counts_no_matching_fingerprints_old.sarif");
-
-        let merged_sarif = merge(&new_sarif, &old_sarif);
-
-        assert_eq!(
+        assert_counts(
+            "counts_no_matching_fingerprints_new.sarif",
+            "counts_no_matching_fingerprints_old.sarif",
             "1 new, 0 updated and 2 closed results.",
-            merged_sarif.runs[0]
-                .automation_details
-                .as_ref()
-                .unwrap()
-                .description
-                .as_ref()
-                .unwrap()
-                .text
-                .as_ref()
-                .unwrap()
         );
     }
 
     #[test]
     fn counts_all_matching_fingerprints() {
-        let new_sarif = load_fixture("counts_all_matching_fingerprints_new.sarif");
-        let old_sarif = load_fixture("counts_all_matching_fingerprints_old.sarif");
-
-        let merged_sarif = merge(&new_sarif, &old_sarif);
-
-        assert_eq!(
+        assert_counts(
+            "counts_all_matching_fingerprints_new.sarif",
+            "counts_all_matching_fingerprints_old.sarif",
             "0 new, 2 updated and 0 closed results.",
-            merged_sarif.runs[0]
-                .automation_details
-                .as_ref()
-                .unwrap()
-                .description
-                .as_ref()
-                .unwrap()
-                .text
-                .as_ref()
-                .unwrap()
         );
     }
 
