@@ -188,61 +188,56 @@ mod tests {
         );
     }
 
-    fn assert_counts(new_fixture: &str, old_fixture: &str, expected_message: &str) {
-        let new_sarif = load_fixture(new_fixture);
-        let old_sarif = load_fixture(old_fixture);
-
-        let merged_sarif = merge(&new_sarif, &old_sarif);
-
-        assert_eq!(
-            expected_message,
-            merged_sarif.runs[0]
-                .automation_details
-                .as_ref()
-                .unwrap()
-                .description
-                .as_ref()
-                .unwrap()
-                .text
-                .as_ref()
-                .unwrap()
-        );
+    struct CountsTestCase<'a> {
+        new_fixture: &'a str,
+        old_fixture: &'a str,
+        expected_message: &'a str,
     }
 
     #[test]
-    fn counts_new_updated_closed_results_for_run() {
-        assert_counts(
-            "updates_and_counts_new.sarif",
-            "updates_and_counts_old.sarif",
-            "1 new, 1 updated and 1 closed results.",
-        );
-    }
+    fn counts_results_for_run() {
+        let test_cases = [
+            CountsTestCase {
+                new_fixture: "updates_and_counts_new.sarif",
+                old_fixture: "updates_and_counts_old.sarif",
+                expected_message: "1 new, 1 updated and 1 closed results.",
+            },
+            CountsTestCase {
+                new_fixture: "counts_no_results_new.sarif",
+                old_fixture: "updates_and_counts_old.sarif",
+                expected_message: "0 new, 0 updated and 2 closed results.",
+            },
+            CountsTestCase {
+                new_fixture: "counts_no_matching_fingerprints_new.sarif",
+                old_fixture: "counts_no_matching_fingerprints_old.sarif",
+                expected_message: "1 new, 0 updated and 2 closed results.",
+            },
+            CountsTestCase {
+                new_fixture: "counts_all_matching_fingerprints_new.sarif",
+                old_fixture: "counts_all_matching_fingerprints_old.sarif",
+                expected_message: "0 new, 2 updated and 0 closed results.",
+            },
+        ];
 
-    #[test]
-    fn counts_run_with_no_results() {
-        assert_counts(
-            "counts_no_results_new.sarif",
-            "updates_and_counts_old.sarif",
-            "0 new, 0 updated and 2 closed results.",
-        );
-    }
+        for case in &test_cases {
+            let new_sarif = load_fixture(case.new_fixture);
+            let old_sarif = load_fixture(case.old_fixture);
+            let merged_sarif = merge(&new_sarif, &old_sarif);
 
-    #[test]
-    fn counts_no_matching_fingerprints() {
-        assert_counts(
-            "counts_no_matching_fingerprints_new.sarif",
-            "counts_no_matching_fingerprints_old.sarif",
-            "1 new, 0 updated and 2 closed results.",
-        );
-    }
-
-    #[test]
-    fn counts_all_matching_fingerprints() {
-        assert_counts(
-            "counts_all_matching_fingerprints_new.sarif",
-            "counts_all_matching_fingerprints_old.sarif",
-            "0 new, 2 updated and 0 closed results.",
-        );
+            assert_eq!(
+                case.expected_message,
+                merged_sarif.runs[0]
+                    .automation_details
+                    .as_ref()
+                    .unwrap()
+                    .description
+                    .as_ref()
+                    .unwrap()
+                    .text
+                    .as_ref()
+                    .unwrap()
+            );
+        }
     }
 
     #[test]
