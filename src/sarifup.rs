@@ -211,6 +211,72 @@ mod tests {
     }
 
     #[test]
+    fn counts_run_with_no_results() {
+        let new_sarif = load_fixture("counts_no_results_new.sarif");
+        let old_sarif = load_fixture("updates_and_counts_old.sarif");
+
+        let merged_sarif = merge(&new_sarif, &old_sarif);
+
+        assert_eq!(
+            "0 new, 0 updated and 2 closed results.",
+            merged_sarif.runs[0]
+                .automation_details
+                .as_ref()
+                .unwrap()
+                .description
+                .as_ref()
+                .unwrap()
+                .text
+                .as_ref()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn counts_no_matching_fingerprints() {
+        let new_sarif = load_fixture("counts_no_matching_fingerprints_new.sarif");
+        let old_sarif = load_fixture("counts_no_matching_fingerprints_old.sarif");
+
+        let merged_sarif = merge(&new_sarif, &old_sarif);
+
+        assert_eq!(
+            "1 new, 0 updated and 2 closed results.",
+            merged_sarif.runs[0]
+                .automation_details
+                .as_ref()
+                .unwrap()
+                .description
+                .as_ref()
+                .unwrap()
+                .text
+                .as_ref()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn counts_all_matching_fingerprints() {
+        let new_sarif = load_fixture("counts_all_matching_fingerprints_new.sarif");
+        let old_sarif = load_fixture("counts_all_matching_fingerprints_old.sarif");
+
+        let merged_sarif = merge(&new_sarif, &old_sarif);
+
+        assert_eq!(
+            "0 new, 2 updated and 0 closed results.",
+            merged_sarif.runs[0]
+                .automation_details
+                .as_ref()
+                .unwrap()
+                .description
+                .as_ref()
+                .unwrap()
+                .text
+                .as_ref()
+                .unwrap()
+        );
+    }
+
+    #[test]
     fn merge_copies_rank_from_matching_fingerprint() {
         let new_sarif = load_fixture("copies_rank_new.sarif");
         let old_sarif = load_fixture("copies_rank_old.sarif");
@@ -280,4 +346,3 @@ mod tests {
         eprintln!("perf_merge_large_sarif: size={} elapsed={:?}", size, dur);
     }
 }
-

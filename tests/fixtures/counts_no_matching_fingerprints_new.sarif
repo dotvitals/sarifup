@@ -1,0 +1,20 @@
+{
+    "version": "2.1.0",
+    "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "new_sarif_1"
+                }
+            },
+            "results": [{
+                   "message": {
+                        "text": "new sarif message 1"
+                    },
+                    "fingerprints": {
+                        "hashResult/v1": "new1"
+                    }
+                }
+            ]
+        }
+    ]
+}
